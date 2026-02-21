@@ -260,16 +260,34 @@
 
   </div><!-- .mirror-center -->
 
-  <!-- Right column: Resolved trades -->
-  <aside class="panel">
-    <div class="p-head">
-      <span class="p-title">RESOLVED TRADES</span>
-      <span class="badge" id="m-resolved-badge">0 closed</span>
-    </div>
-    <div class="feed" id="m-resolved-feed">
-      <div class="empty">No closed positions yet.</div>
-    </div>
-  </aside>
+  <!-- Right column: P&L Chart + Resolved trades -->
+  <div class="mirror-right">
+
+    <section class="panel">
+      <div class="p-head">
+        <span class="p-title">TOTAL P&amp;L</span>
+        <span class="ov-val g" style="font-family:var(--mono);font-size:13px" id="mirror-chart-pnl">+$0.0000</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="mirror-pnl-chart"></canvas>
+      </div>
+      <div class="chart-footer">
+        <span class="legend-dot g">●</span>
+        Realized + unrealized (USDC)
+      </div>
+    </section>
+
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">RESOLVED TRADES</span>
+        <span class="badge" id="m-resolved-badge">0 closed</span>
+      </div>
+      <div class="feed" id="m-resolved-feed">
+        <div class="empty">No closed positions yet.</div>
+      </div>
+    </section>
+
+  </div><!-- .mirror-right -->
 
 </div><!-- .mirror-grid -->
 </div><!-- #tab-mirror -->

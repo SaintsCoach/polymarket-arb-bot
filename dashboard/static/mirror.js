@@ -19,6 +19,114 @@ const M = {
   addresses: {},      // address → data dict
 };
 
+// ── Mirror P&L Chart ──────────────────────────────────────────────────────────
+let mirrorChart;
+const MC = {
+  data:    [0],
+  labels:  [],
+  lastPnl: null,
+};
+
+function initMirrorChart() {
+  const ctx = document.getElementById('mirror-pnl-chart');
+  if (!ctx) return;
+  MC.labels = [fmtTs(Date.now() / 1000)];
+  mirrorChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MC.labels,
+      datasets: [{
+        data: MC.data,
+        borderColor:     '#00e87a',
+        backgroundColor: mirrorGradient,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#00e87a',
+        fill: true,
+        tension: 0.42,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#11111f',
+          borderColor: 'rgba(255,255,255,0.07)',
+          borderWidth: 1,
+          padding: 10,
+          titleColor: '#525270',
+          bodyColor: '#00e87a',
+          callbacks: {
+            title: items => MC.labels[items[0].dataIndex] || '',
+            label: item  => `  P&L  ${ item.parsed.y >= 0 ? '+' : '' }$${ item.parsed.y.toFixed(4) }`,
+          }
+        }
+      },
+      scales: {
+        x: { display: false },
+        y: {
+          grid:   { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+          border: { display: false },
+          ticks: {
+            color: '#525270',
+            font:  { family: "'JetBrains Mono', monospace", size: 10 },
+            callback: v => `${ v >= 0 ? '+' : '' }${ v.toFixed(2) }`,
+            maxTicksLimit: 5,
+          },
+        }
+      },
+      animation: { duration: 250 },
+    }
+  });
+}
+
+function mirrorGradient(ctx) {
+  const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height || 200);
+  g.addColorStop(0, 'rgba(0,232,122,0.22)');
+  g.addColorStop(1, 'rgba(0,232,122,0.00)');
+  return g;
+}
+
+function pushMirrorPnL(totalPnl, ts) {
+  if (!mirrorChart) return;
+  const y = parseFloat(totalPnl) || 0;
+  if (MC.lastPnl === y) return;
+  MC.lastPnl = y;
+
+  MC.data.push(y);
+  MC.labels.push(fmtTs(ts || Date.now() / 1000));
+  if (MC.data.length > 300) { MC.data.shift(); MC.labels.shift(); }
+
+  const color = y >= 0 ? '#00e87a' : '#ff3361';
+  mirrorChart.data.datasets[0].borderColor = color;
+  mirrorChart.data.datasets[0].data        = MC.data;
+  mirrorChart.data.labels                  = MC.labels;
+  mirrorChart.update('none');
+
+  const el = document.getElementById('mirror-chart-pnl');
+  if (el) {
+    el.textContent = `${ y >= 0 ? '+' : '' }$${ Math.abs(y).toFixed(4) }`;
+    el.className   = `ov-val ${ y >= 0 ? 'g' : 'r' }`;
+  }
+}
+
+function resetMirrorChart(ts) {
+  MC.data    = [0];
+  MC.labels  = [fmtTs(ts || Date.now() / 1000)];
+  MC.lastPnl = null;
+  if (!mirrorChart) return;
+  mirrorChart.data.datasets[0].data        = MC.data;
+  mirrorChart.data.datasets[0].borderColor = '#00e87a';
+  mirrorChart.data.labels                  = MC.labels;
+  mirrorChart.update('none');
+  const el = document.getElementById('mirror-chart-pnl');
+  if (el) { el.textContent = '+$0.0000'; el.className = 'ov-val g'; }
+}
+
 // ── Register event handlers ───────────────────────────────────────────────────
 registerHandler('mirror_overview',        renderOverview);
 registerHandler('mirror_positions',       d => renderPositions(d.positions));
@@ -31,10 +139,11 @@ registerHandler('mirror_api_event',       handleApiEvent);
 registerHandler('mirror_bot_start',       d => {
   const el = document.getElementById('m-start-ts');
   if (el) el.textContent = fmtTs(d.ts);
+  resetMirrorChart(d.ts);
 });
 
 // ── Overview panel ────────────────────────────────────────────────────────────
-function renderOverview(d) {
+function renderOverview(d, ts) {
   mirrorEl('m-balance',   `$${commas2(d.balance_usdc)}`);
   mirrorEl('m-deployed',  `$${commas2(d.total_deployed)}`);
   mirrorEl('m-slot-badge', `${d.slots_used} / ${d.slots_total} slots`);
@@ -45,6 +154,8 @@ function renderOverview(d) {
   setPnlEl('m-realized',   d.realized_pnl);
   setPnlEl('m-unrealized', d.unrealized_pnl);
   setPnlEl('m-total-pnl',  d.total_pnl);
+
+  pushMirrorPnL(d.total_pnl, ts);
 }
 
 function setPnlEl(id, val) {
@@ -239,6 +350,9 @@ window.removeAddr = async (address) => {
   if (!confirm(`Remove ${address.slice(0, 12)}…?`)) return;
   await fetch(`/api/mirror/addresses/${encodeURIComponent(address)}`, { method: 'DELETE' });
 };
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', initMirrorChart);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc2(s) {

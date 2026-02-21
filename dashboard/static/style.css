@@ -473,7 +473,8 @@ html, body {
   overflow: hidden;
 }
 .mirror-left,
-.mirror-center {
+.mirror-center,
+.mirror-right {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
