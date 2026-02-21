@@ -26,6 +26,7 @@
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="arb">ARB BOT</button>
     <button class="tab-btn"        data-tab="mirror">MIRROR BOT</button>
+    <button class="tab-btn"        data-tab="datafeed">DATA FEED</button>
   </nav>
 
   <div class="stats-bar">
@@ -303,7 +304,143 @@
 
 </div><!-- #tab-mirror -->
 
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- DATA FEED TAB                                                           -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-datafeed" class="tab-content">
+<div class="mirror-grid">
+
+  <!-- Left column: Portfolio Overview + Live Events -->
+  <div class="mirror-left">
+
+    <!-- Portfolio overview -->
+    <section class="panel">
+      <div class="p-head">
+        <span class="p-title">PORTFOLIO</span>
+        <span class="badge" id="df-slot-badge">0 / 40 slots</span>
+        <button class="btn-danger" id="btn-df-reset">↺ Reset</button>
+      </div>
+      <div class="overview-grid">
+        <div class="ov-cell">
+          <span class="ov-lbl">BALANCE</span>
+          <span class="ov-val" id="df-balance">$20,000.00</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">DEPLOYED</span>
+          <span class="ov-val" id="df-deployed">$0.00</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">REALIZED P&amp;L</span>
+          <span class="ov-val g" id="df-realized">+$0.0000</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">UNREALIZED P&amp;L</span>
+          <span class="ov-val" id="df-unrealized">$0.0000</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">TOTAL P&amp;L</span>
+          <span class="ov-val g" id="df-total-pnl">+$0.0000</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">SLOTS</span>
+          <span class="ov-val y" id="df-slots">0 / 40</span>
+        </div>
+        <div class="ov-cell ov-wide">
+          <span class="ov-lbl">MONITORING SINCE</span>
+          <span class="ov-val" id="df-start-ts">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Events feed -->
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">LIVE EVENTS</span>
+        <span class="badge" id="df-api-badge" title="API-Football quota">API OK</span>
+      </div>
+      <div class="feed" id="df-event-feed">
+        <div class="empty">Waiting for live soccer events…</div>
+      </div>
+    </section>
+
+  </div><!-- .mirror-left -->
+
+  <!-- Center column: Opportunities + Open Positions -->
+  <div class="mirror-center">
+
+    <!-- Opportunity feed -->
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">OPPORTUNITY FEED</span>
+        <span class="badge y" id="df-opp-badge">0 found</span>
+      </div>
+      <div class="feed" id="df-opp-feed">
+        <div class="empty">No opportunities detected yet.</div>
+      </div>
+    </section>
+
+    <!-- Open positions table -->
+    <section class="panel" style="flex:2;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">OPEN POSITIONS</span>
+        <span class="badge g" id="df-pos-badge">0 open</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>Market</th>
+              <th>Side</th>
+              <th>Entry</th>
+              <th>Current</th>
+              <th>Unreal. P&amp;L</th>
+              <th>Age</th>
+              <th>Trigger</th>
+            </tr>
+          </thead>
+          <tbody id="df-pos-tbody">
+            <tr><td colspan="7" class="empty">No open positions.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- .mirror-center -->
+
+  <!-- Right column: P&L Chart + Resolved trades -->
+  <div class="mirror-right">
+
+    <section class="panel">
+      <div class="p-head">
+        <span class="p-title">TOTAL P&amp;L</span>
+        <span class="ov-val g" style="font-family:var(--mono);font-size:13px" id="df-chart-pnl">+$0.0000</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="datafeed-pnl-chart"></canvas>
+      </div>
+      <div class="chart-footer">
+        <span class="legend-dot g">●</span>
+        Realized + unrealized (USDC)
+      </div>
+    </section>
+
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">RESOLVED TRADES</span>
+        <span class="badge" id="df-resolved-badge">0 closed</span>
+      </div>
+      <div class="feed" id="df-resolved-feed">
+        <div class="empty">No closed positions yet.</div>
+      </div>
+    </section>
+
+  </div><!-- .mirror-right -->
+
+</div><!-- .mirror-grid -->
+</div><!-- #tab-datafeed -->
+
 <script src="/static/app.js"></script>
 <script src="/static/mirror.js"></script>
+<script src="/static/datafeed.js"></script>
 </body>
 </html>

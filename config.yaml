@@ -66,6 +66,15 @@ mirror_mode:
     - address: "0x2005d16a84ceefa912d4e380cd32e7ff827875ea"
       nickname: "Whale #1"
 
+# ── DataFeed Bot ──────────────────────────────────────────────────────────────
+datafeed_mode:
+  enabled: true
+  starting_balance_usdc: 20000.0
+  api_football_key: "f50c4634e27f102584264c4a3049a3f0"
+  poll_interval_seconds: 30.0
+  min_edge_pct: 3.0
+  entry_window_seconds: 45
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging:
   log_dir: "logs"

@@ -820,6 +820,12 @@ html, body {
 .debug-entry .de-new  { color: var(--green); font-weight: 700; }
 .debug-entry .de-item { color: var(--text); display: block; padding-left: 10px; }
 
+/* ── DataFeed event colors ───────────────────────────────────────────────────*/
+.df-event-goal  { color: var(--green); }
+.df-event-red   { color: var(--red); }
+.df-event-start { color: var(--text-dim, var(--muted)); }
+.df-event-end   { color: var(--muted); }
+
 /* Scrollbars for new elements */
 .addr-list::-webkit-scrollbar,
 .tbl-wrap::-webkit-scrollbar,

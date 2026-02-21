@@ -26,7 +26,8 @@ app = FastAPI(title="Polymarket Arb Dashboard")
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 _bus: EventBus | None = None
-_mirror_bot = None          # MirrorBot instance, set from main_dashboard
+_mirror_bot  = None          # MirrorBot instance, set from main_dashboard
+_datafeed_bot = None         # DataFeedBot instance, set from main_dashboard
 
 
 def set_event_bus(bus: EventBus) -> None:
@@ -37,6 +38,11 @@ def set_event_bus(bus: EventBus) -> None:
 def set_mirror_bot(bot) -> None:
     global _mirror_bot
     _mirror_bot = bot
+
+
+def set_datafeed_bot(bot) -> None:
+    global _datafeed_bot
+    _datafeed_bot = bot
 
 
 @app.on_event("startup")
@@ -111,6 +117,23 @@ async def mirror_reset():
     if _mirror_bot is None:
         raise HTTPException(503, "Mirror bot not initialized")
     _mirror_bot.reset()
+    return JSONResponse({"ok": True, "ts": time.time()})
+
+
+# ── DataFeed REST API ──────────────────────────────────────────────────────────
+
+@app.get("/api/datafeed/snapshot")
+async def datafeed_snapshot():
+    if _datafeed_bot is None:
+        raise HTTPException(503, "DataFeed bot not initialized")
+    return JSONResponse(_datafeed_bot.snapshot())
+
+
+@app.post("/api/datafeed/reset")
+async def datafeed_reset():
+    if _datafeed_bot is None:
+        raise HTTPException(503, "DataFeed bot not initialized")
+    _datafeed_bot.reset()
     return JSONResponse({"ok": True, "ts": time.time()})
 
 

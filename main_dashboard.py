@@ -22,10 +22,11 @@ import yaml
 from bot.client import PolymarketClient
 from bot.events import EventBus
 from bot.logger import setup_logger
+from bot.datafeed import DataFeedBot
 from bot.mirror import MirrorBot
 from bot.monitor import Monitor
 from bot.paper_trader import PaperTrader
-from dashboard.server import app, set_event_bus, set_mirror_bot
+from dashboard.server import app, set_event_bus, set_mirror_bot, set_datafeed_bot
 
 
 def load_config(path: str) -> dict:
@@ -88,6 +89,20 @@ def main() -> None:
             entry["address"],
             entry.get("nickname", entry["address"][:8]),
         )
+
+    # ── DataFeed Bot ──────────────────────────────────────────────────────────
+    df_cfg = cfg.get("datafeed_mode", {})
+    if df_cfg.get("enabled", False):
+        datafeed = DataFeedBot(
+            event_bus=bus,
+            api_key=df_cfg.get("api_football_key", ""),
+            starting_balance=float(df_cfg.get("starting_balance_usdc", 20_000.0)),
+            poll_interval=float(df_cfg.get("poll_interval_seconds", 30.0)),
+            min_edge_pct=float(df_cfg.get("min_edge_pct", 3.0)),
+            entry_window_s=float(df_cfg.get("entry_window_seconds", 45)),
+        )
+        set_datafeed_bot(datafeed)
+        threading.Thread(target=datafeed.start, daemon=True, name="datafeed").start()
 
     # ── Bot thread ────────────────────────────────────────────────────────────
     def _bot():
