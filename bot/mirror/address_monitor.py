@@ -177,7 +177,12 @@ class AddressMonitor:
             self._emit_address_status(cfg)
 
     def _fetch_positions(self, address: str) -> list[dict]:
-        """Fetch with exponential backoff. Raises RateLimitError or last Exception."""
+        """Fetch active (non-redeemable) positions with exponential backoff.
+
+        Uses redeemable=false so we only see open markets, and limit=500 so
+        we never silently truncate a whale with many active positions.
+        Raises RateLimitError or the last Exception on total failure.
+        """
         delay    = BASE_DELAY
         last_exc = None
 
@@ -185,20 +190,29 @@ class AddressMonitor:
             try:
                 resp = self._http.get(
                     f"{DATA_API}/positions",
-                    params={"user": address, "sizeThreshold": 0.01},
+                    params={
+                        "user":        address,
+                        "sizeThreshold": 0.01,
+                        "redeemable":  "false",   # skip resolved markets
+                        "limit":       500,        # whale may have many active positions
+                    },
                     timeout=10,
                 )
                 if resp.status_code == 429:
                     raise RateLimitError()
                 resp.raise_for_status()
                 data = resp.json()
-                return data if isinstance(data, list) else data.get("positions", [])
+                positions = data if isinstance(data, list) else data.get("positions", [])
+                logger.debug("[%s] API returned %d active positions", address[:12], len(positions))
+                return positions
 
             except RateLimitError:
                 raise
             except Exception as exc:
                 last_exc = exc
                 if attempt < MAX_RETRIES - 1:
+                    logger.warning("[%s] Fetch attempt %d failed: %s — retrying in %.1fs",
+                                   address[:12], attempt + 1, exc, delay)
                     if self._bus:
                         self._bus.publish("mirror_api_event", {
                             "kind":    "retry",
@@ -216,35 +230,57 @@ class AddressMonitor:
     def _process_positions(self, cfg: WatchedAddress,
                            positions: list[dict]) -> None:
         new_map = {p["asset"]: p for p in positions if p.get("asset")}
+        cfg.last_poll_count = len(new_map)
+
+        logger.info("[%s] Poll: %d active positions fetched (initialized=%s, baseline=%d)",
+                    cfg.nickname, len(new_map), cfg.is_initialized, len(cfg.last_positions))
 
         if not cfg.is_initialized:
             cfg.last_positions = new_map
             cfg.is_initialized = True
+            cfg.last_poll_new    = 0
+            cfg.last_poll_closed = 0
             logger.info("[%s] Baseline snapshot: %d positions (not mirrored)",
                         cfg.nickname, len(new_map))
+            self._emit_poll_debug(cfg, new_map, opened=[], closed=[])
             return  # no callbacks on first poll
 
         old_map = cfg.last_positions
+        opened_ids  = [tid for tid in new_map if tid not in old_map]
+        closed_ids  = [tid for tid in old_map if tid not in new_map]
 
-        for token_id, pos in new_map.items():
-            if token_id not in old_map:
-                logger.info("[%s] opened → %s", cfg.nickname,
-                            pos.get("title", "?")[:55])
-                try:
-                    self._on_opened(cfg, pos)
-                except Exception as exc:
-                    logger.error("on_opened error: %s", exc)
+        logger.info("[%s] Diff: %d new, %d closed  (prev=%d, curr=%d)",
+                    cfg.nickname, len(opened_ids), len(closed_ids),
+                    len(old_map), len(new_map))
 
-        for token_id, pos in old_map.items():
-            if token_id not in new_map:
-                logger.info("[%s] closed → %s", cfg.nickname,
-                            pos.get("title", "?")[:55])
-                try:
-                    self._on_closed(cfg, pos)
-                except Exception as exc:
-                    logger.error("on_closed error: %s", exc)
+        cfg.last_poll_new    = len(opened_ids)
+        cfg.last_poll_closed = len(closed_ids)
+
+        for token_id in opened_ids:
+            pos = new_map[token_id]
+            logger.info("[%s] opened → %s  asset=%s  price=%s",
+                        cfg.nickname, pos.get("title", "?")[:55],
+                        token_id[:16], pos.get("curPrice"))
+            try:
+                self._on_opened(cfg, pos)
+            except Exception as exc:
+                logger.error("[%s] on_opened error for %s: %s",
+                             cfg.nickname, pos.get("title", "?")[:40], exc)
+
+        for token_id in closed_ids:
+            pos = old_map[token_id]
+            logger.info("[%s] closed → %s  asset=%s",
+                        cfg.nickname, pos.get("title", "?")[:55], token_id[:16])
+            try:
+                self._on_closed(cfg, pos)
+            except Exception as exc:
+                logger.error("[%s] on_closed error for %s: %s",
+                             cfg.nickname, pos.get("title", "?")[:40], exc)
 
         cfg.last_positions = new_map
+        self._emit_poll_debug(cfg, new_map,
+                              opened=[new_map[t] for t in opened_ids],
+                              closed=[old_map[t] for t in closed_ids])
 
     def reset_all(self) -> None:
         with self._lock:
@@ -288,6 +324,26 @@ class AddressMonitor:
 
     # ── Emitters ──────────────────────────────────────────────────────────────
 
+    def _emit_poll_debug(self, cfg: WatchedAddress, current_map: dict,
+                         opened: list, closed: list) -> None:
+        if not self._bus:
+            return
+        self._bus.publish("mirror_poll_debug", {
+            "address":       cfg.address,
+            "nickname":      cfg.nickname,
+            "ts":            time.time(),
+            "initialized":   cfg.is_initialized,
+            "fetched":       len(current_map),
+            "baseline_size": len(cfg.last_positions),
+            "new_count":     len(opened),
+            "closed_count":  len(closed),
+            "opened": [{"title": p.get("title","?")[:60],
+                        "asset": p.get("asset","")[:20],
+                        "price": p.get("curPrice")} for p in opened],
+            "closed": [{"title": p.get("title","?")[:60],
+                        "asset": p.get("asset","")[:20]} for p in closed],
+        })
+
     def _emit_address_status(self, cfg: WatchedAddress) -> None:
         if self._bus:
             self._bus.publish("mirror_address_status", self._addr_to_dict(cfg))
@@ -309,6 +365,9 @@ class AddressMonitor:
             "rate_limited_until":    cfg.rate_limited_until,
             "last_poll_ts":          cfg.last_poll_ts,
             "last_successful_poll_ts": cfg.last_successful_poll_ts,
+            "last_poll_count":       cfg.last_poll_count,
+            "last_poll_new":         cfg.last_poll_new,
+            "last_poll_closed":      cfg.last_poll_closed,
             "stats": {
                 "trades_mirrored": cfg.stats.trades_mirrored,
                 "wins":            cfg.stats.wins,

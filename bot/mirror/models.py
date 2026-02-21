@@ -33,6 +33,10 @@ class WatchedAddress:
     last_positions: dict = field(default_factory=dict)
     is_initialized: bool = False   # True after first baseline snapshot
     stats: AddressStats = field(default_factory=AddressStats)
+    # Debug / diagnostics (updated every poll)
+    last_poll_count:  int = 0   # positions returned by API last poll
+    last_poll_new:    int = 0   # new positions detected
+    last_poll_closed: int = 0   # closed positions detected
 
     @property
     def is_stale(self) -> bool:

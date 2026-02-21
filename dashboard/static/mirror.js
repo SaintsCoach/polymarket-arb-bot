@@ -136,6 +136,7 @@ registerHandler('mirror_position_closed', d => addResolved(d));
 registerHandler('mirror_address_status',  renderAddressCard);
 registerHandler('mirror_addresses',       d => renderAllAddresses(d.addresses));
 registerHandler('mirror_api_event',       handleApiEvent);
+registerHandler('mirror_poll_debug',      handlePollDebug);
 registerHandler('mirror_bot_start',       d => {
   const el = document.getElementById('m-start-ts');
   if (el) el.textContent = fmtTs(d.ts);
@@ -302,6 +303,49 @@ function handleApiEvent(d) {
   // Could show toast notifications; for now just log quietly.
   // console.debug('[mirror api]', d);
 }
+
+// ── Poll debug panel ──────────────────────────────────────────────────────────
+function handlePollDebug(d) {
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+
+  const statusCls = d.new_count > 0 ? 'de-new' : d.initialized ? 'de-ok' : 'de-warn';
+  const statusTxt = !d.initialized
+    ? `BASELINE (${d.fetched} positions captured)`
+    : d.new_count > 0
+      ? `${d.new_count} NEW  |  ${d.closed_count} closed  |  ${d.fetched} active`
+      : `no change  |  ${d.fetched} active`;
+
+  let inner = `
+    <span class="de-time">${fmtTs(d.ts)}</span>
+    <span class="de-addr">  ${esc2(d.nickname)}</span>
+    <span class="${statusCls}">  ${statusTxt}</span>`;
+
+  if (d.opened && d.opened.length) {
+    d.opened.forEach(p => {
+      inner += `<span class="de-item de-new">↑ ${esc2(p.title)}  @${p.price != null ? (p.price*100).toFixed(1)+'%' : '?'}</span>`;
+    });
+  }
+  if (d.closed && d.closed.length) {
+    d.closed.forEach(p => {
+      inner += `<span class="de-item de-warn">↓ ${esc2(p.title)}</span>`;
+    });
+  }
+
+  const entry = document.createElement('div');
+  entry.className = 'debug-entry';
+  entry.innerHTML = inner;
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 50) log.removeChild(log.lastChild);
+}
+
+// ── Debug panel toggle ────────────────────────────────────────────────────────
+document.getElementById('debug-toggle').addEventListener('click', () => {
+  document.getElementById('debug-panel').classList.toggle('open');
+});
+document.getElementById('debug-close').addEventListener('click', () => {
+  document.getElementById('debug-panel').classList.remove('open');
+});
 
 // ── Reset button ──────────────────────────────────────────────────────────────
 document.getElementById('btn-reset').addEventListener('click', async () => {
