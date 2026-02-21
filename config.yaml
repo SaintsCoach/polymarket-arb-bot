@@ -1,0 +1,72 @@
+# ── Credentials ───────────────────────────────────────────────────────────────
+wallet:
+  private_key: "0xYOUR_PRIVATE_KEY_HERE"
+  address: "0xYOUR_WALLET_ADDRESS_HERE"
+
+api:
+  key: "YOUR_POLYMARKET_API_KEY"
+  secret: "YOUR_POLYMARKET_API_SECRET"
+  passphrase: "YOUR_POLYMARKET_API_PASSPHRASE"
+
+# ── Network ────────────────────────────────────────────────────────────────────
+chain_id: 137                               # 137 = Polygon mainnet, 80002 = Amoy testnet
+clob_host: "https://clob.polymarket.com"
+gamma_host: "https://gamma-api.polymarket.com"
+
+# ── Strategy ──────────────────────────────────────────────────────────────────
+strategy:
+  # Only act when profit after fees meets this threshold (%)
+  min_profit_threshold_pct: 2.0
+
+  # Maximum USDC to spend on each side of the trade (YES side + NO side separately)
+  max_trade_size_usdc: 100.0
+
+  # Hard cap: maximum total USDC deployed across both sides per opportunity
+  max_risk_per_trade_usdc: 200.0
+
+  # If live execution price deviates more than this % from quoted price, abort
+  slippage_tolerance_pct: 0.3
+
+  # Minimum USDC of available liquidity required on each side before placing orders
+  min_liquidity_usdc: 50.0
+
+  # How often to poll for new opportunities (seconds)
+  polling_interval_seconds: 15
+
+  # Polymarket taker fee in basis points (100 bps = 1%). Check current fee schedule.
+  fee_rate_bps: 0
+
+# ── Market Filters ────────────────────────────────────────────────────────────
+filters:
+  sports_tags:
+    - "Sports"
+    - "NBA"
+    - "NFL"
+    - "Soccer"
+    - "MLB"
+    - "NHL"
+    - "UFC"
+    - "Tennis"
+    - "Golf"
+  active_only: true
+  closed: false
+
+# ── Paper Trading ─────────────────────────────────────────────────────────────
+paper_mode:
+  enabled: true                    # set to false when you have real credentials
+  starting_balance_usdc: 10000.0   # virtual wallet to start with
+
+# ── Mirror Bot ────────────────────────────────────────────────────────────────
+mirror_mode:
+  starting_balance_usdc: 20000.0    # virtual portfolio (40 slots × $500)
+  poll_interval_seconds: 30.0       # default polling interval per address
+
+  # Addresses to mirror — add more via the dashboard UI or directly here
+  watched_addresses:
+    - address: "0x2005d16a84ceefa912d4e380cd32e7ff827875ea"
+      nickname: "Whale #1"
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging:
+  log_dir: "logs"
+  level: "INFO"   # DEBUG for verbose price output

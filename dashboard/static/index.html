@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Arb · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────-->
+<header class="header">
+  <div class="brand">
+    <span class="brand-hex">⬡</span>
+    <span class="brand-name">POLYMARKET ARB</span>
+    <div class="live-pill" id="live-pill">
+      <span class="live-dot"></span>
+      <span id="conn-label">OFFLINE</span>
+    </div>
+  </div>
+
+  <!-- Tab navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="arb">ARB BOT</button>
+    <button class="tab-btn"        data-tab="mirror">MIRROR BOT</button>
+  </nav>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-lbl">OPPORTUNITIES</span>
+      <span class="stat-val y" id="s-opps">0</span>
+    </div>
+    <div class="sep"></div>
+    <div class="stat">
+      <span class="stat-lbl">EXECUTED</span>
+      <span class="stat-val g" id="s-exec">0</span>
+    </div>
+    <div class="sep"></div>
+    <div class="stat">
+      <span class="stat-lbl">ABORTED</span>
+      <span class="stat-val r" id="s-abort">0</span>
+    </div>
+    <div class="sep"></div>
+    <div class="stat">
+      <span class="stat-lbl">SIM. P&amp;L</span>
+      <span class="stat-val g" id="s-pnl">+$0.0000</span>
+    </div>
+    <div class="sep"></div>
+    <div class="stat">
+      <span class="stat-lbl">BALANCE</span>
+      <span class="stat-val" id="s-bal">$10,000.00</span>
+    </div>
+    <div class="sep"></div>
+    <div class="stat">
+      <span class="stat-lbl">UPTIME</span>
+      <span class="stat-val" style="font-family:var(--mono)" id="s-uptime">00:00:00</span>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- ARB BOT TAB                                                             -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-arb" class="tab-content active">
+<div class="grid">
+
+  <!-- Left: Market Scanner -->
+  <aside class="panel">
+    <div class="p-head">
+      <span class="p-title">MARKET SCANNER</span>
+      <span class="scan-indicator">
+        <span class="scan-ring"></span>
+        SCANNING
+      </span>
+    </div>
+    <div class="scan-meta">
+      <div class="scan-kv">
+        <span class="scan-k">Markets</span>
+        <span class="scan-v" id="sc-total">—</span>
+      </div>
+      <div class="scan-kv">
+        <span class="scan-k">Candidates</span>
+        <span class="scan-v y" id="sc-cands">—</span>
+      </div>
+      <div class="scan-kv">
+        <span class="scan-k">Scan ms</span>
+        <span class="scan-v" id="sc-ms">—</span>
+      </div>
+    </div>
+    <div class="candidate-list" id="cand-list">
+      <div class="empty">Waiting for first scan…</div>
+    </div>
+  </aside>
+
+  <!-- Center: Opportunity feed + Trade log -->
+  <div class="col-mid">
+
+    <!-- Opportunity feed -->
+    <section class="panel">
+      <div class="p-head">
+        <span class="p-title">OPPORTUNITY FEED</span>
+        <span class="badge y" id="opp-badge">0 found</span>
+      </div>
+      <div class="feed" id="opp-feed">
+        <div class="empty">Monitoring markets for arbitrage opportunities…</div>
+      </div>
+    </section>
+
+    <!-- Trade log -->
+    <section class="panel">
+      <div class="p-head">
+        <span class="p-title">TRADE EXECUTION LOG</span>
+        <span class="badge" id="trade-badge">0 trades</span>
+      </div>
+      <div class="feed" id="trade-feed">
+        <div class="empty">No trades attempted yet.</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Right: P&L Chart -->
+  <aside class="panel">
+    <div class="p-head">
+      <span class="p-title">CUMULATIVE P&amp;L</span>
+      <span class="stat-val g" style="font-family:var(--mono);font-size:13px" id="chart-pnl">+$0.0000</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="pnl-chart"></canvas>
+    </div>
+    <div class="chart-footer">
+      <span class="legend-dot g">●</span>
+      Simulated profit (USDC)
+    </div>
+  </aside>
+
+</div><!-- .grid -->
+</div><!-- #tab-arb -->
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- MIRROR BOT TAB                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-mirror" class="tab-content">
+<div class="mirror-grid">
+
+  <!-- Left column: Portfolio Overview + Watched Addresses -->
+  <div class="mirror-left">
+
+    <!-- Portfolio overview -->
+    <section class="panel">
+      <div class="p-head">
+        <span class="p-title">PORTFOLIO</span>
+        <span class="badge" id="m-slot-badge">0 / 40 slots</span>
+        <button class="btn-danger" id="btn-reset">↺ Reset</button>
+      </div>
+      <div class="overview-grid">
+        <div class="ov-cell">
+          <span class="ov-lbl">BALANCE</span>
+          <span class="ov-val" id="m-balance">$20,000.00</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">DEPLOYED</span>
+          <span class="ov-val" id="m-deployed">$0.00</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">REALIZED P&amp;L</span>
+          <span class="ov-val g" id="m-realized">+$0.0000</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">UNREALIZED P&amp;L</span>
+          <span class="ov-val" id="m-unrealized">$0.0000</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">TOTAL P&amp;L</span>
+          <span class="ov-val g" id="m-total-pnl">+$0.0000</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">QUEUE</span>
+          <span class="ov-val y" id="m-queue-cnt">0</span>
+        </div>
+        <div class="ov-cell ov-wide">
+          <span class="ov-lbl">MONITORING SINCE</span>
+          <span class="ov-val" id="m-start-ts">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Watched addresses -->
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">WATCHED ADDRESSES</span>
+        <button class="btn-add" id="btn-add-addr">+ ADD</button>
+      </div>
+      <div class="addr-list" id="addr-list">
+        <div class="empty">No addresses configured.</div>
+      </div>
+
+      <!-- Add address form (hidden by default) -->
+      <div class="add-form" id="add-form" style="display:none;">
+        <input class="form-input" id="f-addr"  type="text" placeholder="0x wallet address" />
+        <input class="form-input" id="f-nick"  type="text" placeholder="Nickname" />
+        <div class="form-row">
+          <button class="btn-primary" id="btn-submit-addr">Add</button>
+          <button class="btn-cancel"  id="btn-cancel-addr">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- .mirror-left -->
+
+  <!-- Center column: Open Positions + Queue -->
+  <div class="mirror-center">
+
+    <!-- Open positions table -->
+    <section class="panel" style="flex:2;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">OPEN POSITIONS</span>
+        <span class="badge g" id="m-pos-badge">0 open</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>Market</th>
+              <th>Side</th>
+              <th>Entry</th>
+              <th>Current</th>
+              <th>Unreal. P&amp;L</th>
+              <th>Age</th>
+              <th>Copier</th>
+            </tr>
+          </thead>
+          <tbody id="pos-tbody">
+            <tr><td colspan="7" class="empty">No open positions.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Trade queue -->
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">TRADE QUEUE</span>
+        <span class="badge y" id="m-queue-badge">0 queued</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="pos-table">
+          <thead>
+            <tr><th>Market</th><th>Side</th><th>Entry</th><th>Copier</th><th>Queued</th></tr>
+          </thead>
+          <tbody id="queue-tbody">
+            <tr><td colspan="5" class="empty">Queue is empty.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- .mirror-center -->
+
+  <!-- Right column: Resolved trades -->
+  <aside class="panel">
+    <div class="p-head">
+      <span class="p-title">RESOLVED TRADES</span>
+      <span class="badge" id="m-resolved-badge">0 closed</span>
+    </div>
+    <div class="feed" id="m-resolved-feed">
+      <div class="empty">No closed positions yet.</div>
+    </div>
+  </aside>
+
+</div><!-- .mirror-grid -->
+</div><!-- #tab-mirror -->
+
+<script src="/static/app.js"></script>
+<script src="/static/mirror.js"></script>
+</body>
+</html>
