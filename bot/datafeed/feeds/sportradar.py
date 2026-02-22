@@ -1,6 +1,6 @@
 """
 Sportradar trial HTTP polling feed.
-Soccer: schedules/live/results  (30s poll)
+Soccer: schedules/live/summaries  (30s poll)
 NBA:    games/{date}/schedule   (30s poll)
 
 Emits: match_start, goal, red_card, match_end, game_start, game_end
@@ -17,7 +17,7 @@ from ..models import LiveEvent
 
 logger = logging.getLogger("arb_bot.datafeed.sportradar")
 
-SOCCER_LIVE = "https://api.sportradar.us/soccer/trial/v4/en/schedules/live/results.json"
+SOCCER_LIVE = "https://api.sportradar.us/soccer/trial/v4/en/schedules/live/summaries.json"
 NBA_LIVE    = "https://api.sportradar.us/nba/trial/v8/en/games/{date}/schedule.json"
 
 
@@ -62,7 +62,7 @@ class SportradarFeed(BaseSportFeed):
                 return []
             resp.raise_for_status()
             data     = resp.json()
-            summaries = data.get("results", []) or data.get("sport_events", [])
+            summaries = data.get("summaries", [])
             events   = self._diff_soccer(summaries)
             logger.info("[df-sportradar] poll: %d fixtures, %d events",
                         len(summaries), len(events))
@@ -90,7 +90,7 @@ class SportradarFeed(BaseSportFeed):
                          if c.get("qualifier") == "away"), "Away")
             home_score = status.get("home_score", 0) or 0
             away_score = status.get("away_score", 0) or 0
-            minute     = status.get("clock", {}).get("played", "0").split(":")[0]
+            minute     = (status.get("clock") or {}).get("played", "0:00").split(":")[0]
             try:
                 minute = int(minute)
             except (ValueError, AttributeError):
