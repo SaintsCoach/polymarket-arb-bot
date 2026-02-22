@@ -22,11 +22,12 @@ import yaml
 from bot.client import PolymarketClient
 from bot.events import EventBus
 from bot.logger import setup_logger
+from bot.crypto_arb import CryptoArbBot
 from bot.datafeed import DataFeedBot
 from bot.mirror import MirrorBot
 from bot.monitor import Monitor
 from bot.paper_trader import PaperTrader
-from dashboard.server import app, set_event_bus, set_mirror_bot, set_datafeed_bot
+from dashboard.server import app, set_event_bus, set_mirror_bot, set_datafeed_bot, set_crypto_arb_bot
 
 
 def load_config(path: str) -> dict:
@@ -97,12 +98,34 @@ def main() -> None:
             event_bus=bus,
             api_key=df_cfg.get("api_football_key", ""),
             starting_balance=float(df_cfg.get("starting_balance_usdc", 20_000.0)),
-            poll_interval=float(df_cfg.get("poll_interval_seconds", 30.0)),
+            poll_interval=float(df_cfg.get("poll_interval_seconds", 15.0)),
             min_edge_pct=float(df_cfg.get("min_edge_pct", 3.0)),
             entry_window_s=float(df_cfg.get("entry_window_seconds", 45)),
+            sportradar_key=df_cfg.get("sportradar_api_key", ""),
+            sportradar_poll=float(df_cfg.get("sportradar_poll_seconds", 30.0)),
+            edge_tracker_poll_s=float(df_cfg.get("edge_tracker_poll_s", 3.0)),
+            edge_price_move_threshold=float(df_cfg.get("edge_price_move_threshold", 0.02)),
+            mirror_bot=mirror,
         )
         set_datafeed_bot(datafeed)
         threading.Thread(target=datafeed.start, daemon=True, name="datafeed").start()
+
+    # ── Crypto Arb Bot ────────────────────────────────────────────────────────
+    ca_cfg = cfg.get("crypto_arb_mode", {})
+    if ca_cfg.get("enabled", False):
+        crypto_arb = CryptoArbBot(
+            event_bus=bus,
+            starting_balance=float(ca_cfg.get("starting_balance_usdc", 20_000.0)),
+            scan_interval=float(ca_cfg.get("scan_interval_seconds", 35.0)),
+            min_profit_pct=float(ca_cfg.get("min_profit_pct", 0.5)),
+            max_position_usdc=float(ca_cfg.get("max_position_usdc", 500.0)),
+            max_position_pct=float(ca_cfg.get("max_position_pct", 0.02)),
+            min_volume_usdc=float(ca_cfg.get("min_24h_volume_usdc", 100_000.0)),
+            order_book_depth=int(ca_cfg.get("order_book_depth", 10)),
+            min_book_age_s=float(ca_cfg.get("min_order_book_age_s", 60.0)),
+        )
+        set_crypto_arb_bot(crypto_arb)
+        threading.Thread(target=crypto_arb.start, daemon=True, name="crypto-arb").start()
 
     # ── Bot thread ────────────────────────────────────────────────────────────
     def _bot():

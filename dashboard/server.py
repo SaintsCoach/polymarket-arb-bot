@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from bot.events import EventBus
+from bot.mirror import rn1_analysis
 
 _STATIC = os.path.join(os.path.dirname(__file__), "static")
 
@@ -26,8 +27,9 @@ app = FastAPI(title="Polymarket Arb Dashboard")
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 _bus: EventBus | None = None
-_mirror_bot  = None          # MirrorBot instance, set from main_dashboard
-_datafeed_bot = None         # DataFeedBot instance, set from main_dashboard
+_mirror_bot   = None
+_datafeed_bot = None
+_crypto_arb_bot = None
 
 
 def set_event_bus(bus: EventBus) -> None:
@@ -43,6 +45,11 @@ def set_mirror_bot(bot) -> None:
 def set_datafeed_bot(bot) -> None:
     global _datafeed_bot
     _datafeed_bot = bot
+
+
+def set_crypto_arb_bot(bot) -> None:
+    global _crypto_arb_bot
+    _crypto_arb_bot = bot
 
 
 @app.on_event("startup")
@@ -120,6 +127,59 @@ async def mirror_reset():
     return JSONResponse({"ok": True, "ts": time.time()})
 
 
+@app.get("/api/mirror/rn1-analysis")
+async def rn1_analysis_get():
+    """Return cached RN1 analysis (runs inline if cache is stale/missing)."""
+    # Try cache first to keep the response fast
+    cached = rn1_analysis.load_cached()
+    if cached:
+        return JSONResponse(cached)
+    # No fresh cache — derive address from mirror bot config and run analysis
+    address = _get_rn1_address()
+    if not address:
+        raise HTTPException(404, "No watched addresses configured")
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, rn1_analysis.analyze, address
+        )
+        return JSONResponse(result)
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+@app.post("/api/mirror/rn1-analysis/refresh")
+async def rn1_analysis_refresh():
+    """Force-refresh the RN1 analysis (ignores cache TTL)."""
+    address = _get_rn1_address()
+    if not address:
+        raise HTTPException(404, "No watched addresses configured")
+    # Invalidate cache
+    try:
+        rn1_analysis.CACHE_FILE.unlink(missing_ok=True)
+    except Exception:
+        pass
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, rn1_analysis.analyze, address
+        )
+        return JSONResponse(result)
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+def _get_rn1_address() -> str:
+    """Return the first watched address from MirrorBot, or empty string."""
+    if _mirror_bot is None:
+        return ""
+    try:
+        addresses = _mirror_bot.get_addresses()
+        if addresses:
+            return addresses[0].get("address", "")
+    except Exception:
+        pass
+    return ""
+
+
 # ── DataFeed REST API ──────────────────────────────────────────────────────────
 
 @app.get("/api/datafeed/snapshot")
@@ -134,6 +194,23 @@ async def datafeed_reset():
     if _datafeed_bot is None:
         raise HTTPException(503, "DataFeed bot not initialized")
     _datafeed_bot.reset()
+    return JSONResponse({"ok": True, "ts": time.time()})
+
+
+# ── Crypto Arb REST API ───────────────────────────────────────────────────────
+
+@app.get("/api/crypto_arb/snapshot")
+async def crypto_arb_snapshot():
+    if _crypto_arb_bot is None:
+        raise HTTPException(503, "Crypto arb bot not initialized")
+    return JSONResponse(_crypto_arb_bot.snapshot())
+
+
+@app.post("/api/crypto_arb/reset")
+async def crypto_arb_reset():
+    if _crypto_arb_bot is None:
+        raise HTTPException(503, "Crypto arb bot not initialized")
+    _crypto_arb_bot.reset()
     return JSONResponse({"ok": True, "ts": time.time()})
 
 

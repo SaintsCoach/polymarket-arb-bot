@@ -826,6 +826,126 @@ html, body {
 .df-event-start { color: var(--text-dim, var(--muted)); }
 .df-event-end   { color: var(--muted); }
 
+/* ── RN1 analysis bar charts ────────────────────────────────────────────────*/
+.rn1-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+.rn1-bar-label {
+  width: 80px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rn1-bar-track {
+  flex: 1;
+  height: 5px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rn1-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--blue);
+  transition: width 0.4s ease;
+}
+.rn1-bar-val {
+  width: 28px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ── Edge latency colors ─────────────────────────────────────────────────────*/
+.df-latency-fast   { color: var(--green); }   /* < 15s */
+.df-latency-medium { color: var(--yellow); }  /* 15-45s */
+.df-latency-slow   { color: var(--red); }     /* > 45s */
+
+/* ── Market type badges ──────────────────────────────────────────────────────*/
+.df-badge-winner {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0,232,122,0.1);
+  color: var(--green);
+  border: 1px solid rgba(0,232,122,0.25);
+}
+.df-badge-ou {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(245,197,66,0.1);
+  color: var(--yellow);
+  border: 1px solid rgba(245,197,66,0.25);
+}
+.df-badge-btts {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(100,100,255,0.1);
+  color: #8888ff;
+  border: 1px solid rgba(100,100,255,0.25);
+}
+
+/* ── Feed source badge ───────────────────────────────────────────────────────*/
+.df-src-af {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(59,158,255,0.12);
+  color: var(--blue);
+}
+.df-src-sr {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(155,89,245,0.12);
+  color: var(--purple);
+}
+
+/* ── Crypto Arb opportunity cards ────────────────────────────────────────────*/
+.ca-opp-card {
+  margin: 6px 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border-left: 3px solid var(--border);
+  background: var(--bg3);
+  font-size: 12px;
+}
+.ca-opp-profit  { border-left-color: var(--green); background: rgba(0,232,122,0.05); }
+.ca-opp-marginal{ border-left-color: var(--yellow); background: rgba(245,197,66,0.05); }
+.ca-opp-loss    { border-left-color: var(--dim); }
+.ca-opp-header  { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.ca-opp-sym     { font-family:var(--mono); font-weight:600; font-size:13px; }
+.ca-opp-net     { font-family:var(--mono); font-size:12px; font-weight:600; margin-left:auto; }
+.ca-opp-time    { font-size:10px; color:var(--muted); }
+.ca-opp-body    { display:grid; grid-template-columns:repeat(3,1fr); gap:3px 12px; color:var(--muted); font-size:11px; }
+.ca-opp-body b  { color:var(--text); }
+
 /* Scrollbars for new elements */
 .addr-list::-webkit-scrollbar,
 .tbl-wrap::-webkit-scrollbar,

@@ -2,6 +2,13 @@
 
 import time
 from dataclasses import dataclass, field
+from enum import Enum
+
+
+class MarketType(Enum):
+    GAME_WINNER = "game_winner"
+    OVER_UNDER  = "over_under"
+    BOTH_TEAMS  = "btts"
 
 
 @dataclass
@@ -15,6 +22,19 @@ class LiveEvent:
     event_type: str       # "goal" | "red_card" | "match_start" | "match_end"
     detected_at: float    # time.time()
     raw: dict = field(default_factory=dict)
+    source: str = "api_football"  # "api_football" | "sportradar"
+
+
+@dataclass
+class MatchedMarket:
+    market_id: str
+    question: str
+    market_type: MarketType
+    token_id: str        # Yes token
+    token_id_no: str     # No token
+    current_price: float
+    ou_line: float | None  # only for OVER_UNDER
+    outcome: str
 
 
 @dataclass
@@ -29,6 +49,21 @@ class DFOpportunity:
     edge_pct: float
     source_event: str     # e.g. "goal 1-0 min 23"
     detected_at: float
+    market_type: str = "game_winner"   # "game_winner" | "over_under" | "btts"
+    ou_line: float | None = None
+
+
+@dataclass
+class EdgeMeasurement:
+    event_id: str
+    event_type: str
+    latency_s: float        # seconds: detection → price move
+    price_at_detection: float
+    price_after_move: float
+    price_delta: float
+    detected_at: float
+    price_moved_at: float
+    feed_source: str        # "api_football" | "sportradar"
 
 
 @dataclass

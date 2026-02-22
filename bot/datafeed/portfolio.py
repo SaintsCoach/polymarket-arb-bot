@@ -23,6 +23,7 @@ logger = logging.getLogger("arb_bot.datafeed.portfolio")
 SLOTS          = 40
 SLOT_SIZE_USDC = 500.0
 GAMMA_API      = "https://gamma-api.polymarket.com"
+HOT_WINDOW_S   = 120.0   # positions younger than this get priority price refresh
 
 
 class DataFeedPortfolio:
@@ -172,10 +173,19 @@ class DataFeedPortfolio:
             self.close_position_by_token(token_id, exit_price)
 
     def update_prices(self, http_session) -> None:
-        """Refresh current_price for all open positions via Gamma API."""
+        """
+        Refresh current_price for all open positions via Gamma API.
+        Hot positions (age < HOT_WINDOW_S) are always refreshed first.
+        """
         if not self._positions:
             return
-        token_ids = list(self._positions.keys())
+
+        now = time.time()
+        hot_ids  = [tid for tid, p in self._positions.items()
+                    if (now - p.opened_at) < HOT_WINDOW_S]
+        cold_ids = [tid for tid in self._positions if tid not in hot_ids]
+        token_ids = hot_ids + cold_ids   # hot first
+
         try:
             for i in range(0, len(token_ids), 20):
                 batch     = token_ids[i:i + 20]

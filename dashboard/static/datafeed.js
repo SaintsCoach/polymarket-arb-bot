@@ -128,6 +128,10 @@ async function hydrateDFSnapshot() {
     }
     if (snap.overview)  renderDFOverview(snap.overview);
     if (snap.positions) renderDFPositions(snap.positions);
+    if (snap.edge_measurements && snap.edge_measurements.length) {
+      snap.edge_measurements.slice().reverse().forEach(m => addDFEdgeRow(m));
+    }
+    if (snap.edge_stats) updateDFEdgeStats(snap.edge_stats);
   } catch (e) { /* datafeed bot may not be enabled */ }
 }
 
@@ -137,13 +141,15 @@ registerHandler('datafeed_start',            d => {
   if (el) el.textContent = dfFmtTs(d.ts);
   resetDFChart(d.ts);
 });
-registerHandler('datafeed_overview',         d => renderDFOverview(d));
-registerHandler('datafeed_positions',        d => renderDFPositions(d.positions));
-registerHandler('datafeed_position_opened',  d => flashDFPositionOpened());
-registerHandler('datafeed_position_closed',  d => addDFResolved(d));
-registerHandler('datafeed_live_event',       d => addDFLiveEvent(d));
-registerHandler('datafeed_opportunity',      d => addDFOpportunity(d));
-registerHandler('datafeed_api_status',       d => updateDFApiStatus(d));
+registerHandler('datafeed_overview',            d => renderDFOverview(d));
+registerHandler('datafeed_positions',           d => renderDFPositions(d.positions));
+registerHandler('datafeed_position_opened',     d => flashDFPositionOpened());
+registerHandler('datafeed_position_closed',     d => addDFResolved(d));
+registerHandler('datafeed_live_event',          d => addDFLiveEvent(d));
+registerHandler('datafeed_opportunity',         d => addDFOpportunity(d));
+registerHandler('datafeed_api_status',          d => updateDFApiStatus(d));
+registerHandler('datafeed_edge_measurement',    d => addDFEdgeRow(d));
+registerHandler('datafeed_edge_stats',          d => updateDFEdgeStats(d));
 
 // ── Overview panel ────────────────────────────────────────────────────────────
 function renderDFOverview(d, ts) {
@@ -235,13 +241,18 @@ function addDFLiveEvent(d) {
   const type = d.event_type || '';
   let icon = '●';
   let cls  = '';
-  if (type === 'goal')        { icon = '⚽'; cls = 'df-event-goal'; }
-  else if (type === 'red_card') { icon = '🟥'; cls = 'df-event-red'; }
-  else if (type === 'match_start') { icon = '▶'; cls = 'df-event-start'; }
-  else if (type === 'match_end')   { icon = '■'; cls = 'df-event-end'; }
+  if (type === 'goal')             { icon = '⚽'; cls = 'df-event-goal'; }
+  else if (type === 'red_card')    { icon = '🟥'; cls = 'df-event-red'; }
+  else if (type === 'match_start') { icon = '▶';  cls = 'df-event-start'; }
+  else if (type === 'match_end')   { icon = '■';  cls = 'df-event-end'; }
+  else if (type === 'game_start')  { icon = '▶';  cls = 'df-event-start'; }
+  else if (type === 'game_end')    { icon = '■';  cls = 'df-event-end'; }
 
-  const score = `${d.home_score}-${d.away_score}`;
-  const label = `${dfEsc(d.home_team)} vs ${dfEsc(d.away_team)}`;
+  const score    = `${d.home_score}-${d.away_score}`;
+  const label    = `${dfEsc(d.home_team)} vs ${dfEsc(d.away_team)}`;
+  const srcBadge = d.source === 'sportradar'
+    ? '<span class="df-src-sr">SR</span>'
+    : '<span class="df-src-af">AF</span>';
 
   const card = document.createElement('div');
   card.className = 'opp-card';
@@ -250,16 +261,30 @@ function addDFLiveEvent(d) {
   card.innerHTML = `
     <div class="card-row">
       <span class="card-q ${cls}">${icon} ${label}</span>
-      <span class="card-time">${dfFmtTs(d.detected_at)}</span>
+      <span style="display:flex;gap:5px;align-items:center">
+        ${srcBadge}
+        <span class="card-time">${dfFmtTs(d.detected_at)}</span>
+      </span>
     </div>
     <div class="metrics">
-      <div class="metric"><span class="m-lbl">EVENT</span><span class="m-val ${cls}">${dfEsc(type.replace('_', ' '))}</span></div>
+      <div class="metric"><span class="m-lbl">EVENT</span><span class="m-val ${cls}">${dfEsc(type.replace(/_/g, ' '))}</span></div>
       <div class="metric"><span class="m-lbl">SCORE</span><span class="m-val">${score}</span></div>
       <div class="metric"><span class="m-lbl">MIN</span><span class="m-val">${d.minute || 0}'</span></div>
     </div>
   `;
   feed.insertBefore(card, feed.firstChild);
   while (feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+// ── Market-type badge helper ──────────────────────────────────────────────────
+function dfMarketBadge(d) {
+  const mt = d.market_type || 'game_winner';
+  if (mt === 'over_under') {
+    const line = d.ou_line != null ? ` ${d.ou_line}` : '';
+    return `<span class="df-badge-ou">O/U${line}</span>`;
+  }
+  if (mt === 'btts') return '<span class="df-badge-btts">BTTS</span>';
+  return '<span class="df-badge-winner">WINNER</span>';
 }
 
 // ── Opportunity feed ──────────────────────────────────────────────────────────
@@ -280,7 +305,10 @@ function addDFOpportunity(d) {
   card.className = 'opp-card';
   card.innerHTML = `
     <div class="card-row">
-      <span class="card-q">${dfEsc(d.market_question)}</span>
+      <span class="card-q" style="display:flex;align-items:center;gap:6px">
+        ${dfMarketBadge(d)}
+        ${dfEsc(d.market_question)}
+      </span>
       <span class="card-time">${dfFmtTs(d.detected_at)}</span>
     </div>
     <div class="metrics">
@@ -297,14 +325,59 @@ function addDFOpportunity(d) {
 
 // ── API status indicator ──────────────────────────────────────────────────────
 function updateDFApiStatus(d) {
-  const badge = document.getElementById('df-api-badge');
-  if (!badge) return;
+  const source    = d.source || 'api_football';
   const remaining = d.calls_remaining || 0;
   const health    = d.health || 'green';
-  badge.textContent = `API ${remaining} calls left`;
-  badge.style.color = health === 'green' ? 'var(--green)'
-    : health === 'yellow' ? 'var(--yellow)'
-    : 'var(--red)';
+  const color     = health === 'green' ? 'var(--green)'
+    : health === 'yellow' ? 'var(--yellow)' : 'var(--red)';
+
+  if (source === 'sportradar') {
+    const badge = document.getElementById('df-api-badge-sr');
+    if (badge) { badge.textContent = `SR ${remaining}`; badge.style.color = color; }
+  } else {
+    const badge = document.getElementById('df-api-badge-af');
+    if (badge) { badge.textContent = `AF ${remaining}`; badge.style.color = color; }
+  }
+}
+
+// ── Edge Latency table ────────────────────────────────────────────────────────
+function addDFEdgeRow(m) {
+  const tbody = document.getElementById('df-edge-tbody');
+  if (!tbody) return;
+
+  // Clear placeholder
+  const placeholder = tbody.querySelector('.empty');
+  if (placeholder) placeholder.closest('tr').remove();
+
+  const lat   = parseFloat(m.latency_s) || 0;
+  const delta = parseFloat(m.price_delta) || 0;
+  const latCls = lat < 15 ? 'df-latency-fast'
+    : lat < 45 ? 'df-latency-medium' : 'df-latency-slow';
+  const srcLabel = m.feed_source === 'sportradar'
+    ? '<span class="df-src-sr">SR</span>'
+    : '<span class="df-src-af">AF</span>';
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="mono-sm">${dfEsc(m.event_type || '')}</td>
+    <td class="mono-sm ${latCls}">${lat.toFixed(1)}s</td>
+    <td class="mono-sm ${delta >= 0 ? 'pnl-pos' : 'pnl-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(3)}</td>
+    <td>${srcLabel}</td>
+  `;
+  tbody.insertBefore(tr, tbody.firstChild);
+  while (tbody.children.length > 40) tbody.removeChild(tbody.lastChild);
+}
+
+function updateDFEdgeStats(d) {
+  const badge = document.getElementById('df-edge-stats');
+  if (!badge) return;
+  if (!d || !d.total_tracked) {
+    badge.textContent = '--';
+    return;
+  }
+  const p50 = d.p50_latency_s != null ? `p50 ${d.p50_latency_s}s` : '';
+  const p95 = d.p95_latency_s != null ? `p95 ${d.p95_latency_s}s` : '';
+  badge.textContent = [p50, p95].filter(Boolean).join(' · ') || `${d.total_tracked} tracked`;
 }
 
 // ── Reset button ──────────────────────────────────────────────────────────────
@@ -318,12 +391,15 @@ document.addEventListener('DOMContentLoaded', () => {
       DF.resolvedCount = 0;
       dfEl('df-opp-badge',      '0 found');
       dfEl('df-resolved-badge', '0 closed');
+      dfEl('df-edge-stats',     '--');
       const evtFeed = document.getElementById('df-event-feed');
       if (evtFeed) evtFeed.innerHTML = '<div class="empty">Waiting for live soccer events…</div>';
       const oppFeed = document.getElementById('df-opp-feed');
       if (oppFeed) oppFeed.innerHTML = '<div class="empty">No opportunities detected yet.</div>';
       const resFeed = document.getElementById('df-resolved-feed');
       if (resFeed) resFeed.innerHTML = '<div class="empty">No closed positions yet.</div>';
+      const edgeTbody = document.getElementById('df-edge-tbody');
+      if (edgeTbody) edgeTbody.innerHTML = '<tr><td colspan="4" class="empty">No measurements yet.</td></tr>';
     });
   }
 

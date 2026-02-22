@@ -27,6 +27,7 @@
     <button class="tab-btn active" data-tab="arb">ARB BOT</button>
     <button class="tab-btn"        data-tab="mirror">MIRROR BOT</button>
     <button class="tab-btn"        data-tab="datafeed">DATA FEED</button>
+    <button class="tab-btn"        data-tab="cryptoarb">CRYPTO ARB</button>
   </nav>
 
   <div class="stats-bar">
@@ -154,7 +155,7 @@
     <section class="panel">
       <div class="p-head">
         <span class="p-title">PORTFOLIO</span>
-        <span class="badge" id="m-slot-badge">0 / 40 slots</span>
+        <span class="badge" id="m-slot-badge">0 / 200 slots</span>
         <button class="btn-danger" id="btn-reset">↺ Reset</button>
       </div>
       <div class="overview-grid">
@@ -288,6 +289,62 @@
       </div>
     </section>
 
+    <!-- RN1 Analysis panel -->
+    <section class="panel" style="flex-shrink:0;" id="rn1-panel">
+      <div class="p-head">
+        <span class="p-title">RN1 TRADE ANALYSIS</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <span class="badge" id="rn1-meta">--</span>
+          <button class="btn-sm" id="btn-rn1-refresh">↺</button>
+        </span>
+      </div>
+      <!-- Sizing row -->
+      <div class="overview-grid" id="rn1-sizing-grid" style="display:none">
+        <div class="ov-cell">
+          <span class="ov-lbl">MEDIAN SIZE</span>
+          <span class="ov-val" id="rn1-median">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">MEAN SIZE</span>
+          <span class="ov-val" id="rn1-mean">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">P95 SIZE</span>
+          <span class="ov-val y" id="rn1-p95">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">MAX SIZE</span>
+          <span class="ov-val y" id="rn1-max">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">YES / NO</span>
+          <span class="ov-val" id="rn1-yn">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">AVG ENTRY</span>
+          <span class="ov-val" id="rn1-avg-price">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">30D TRADES</span>
+          <span class="ov-val" id="rn1-30d">—</span>
+        </div>
+        <div class="ov-cell">
+          <span class="ov-lbl">PER DAY</span>
+          <span class="ov-val" id="rn1-per-day">—</span>
+        </div>
+      </div>
+      <!-- Category bar -->
+      <div id="rn1-cats" style="padding:6px 14px 8px;display:none">
+        <div style="font-size:9px;letter-spacing:0.08em;color:var(--muted);margin-bottom:5px">TOP CATEGORIES</div>
+        <div id="rn1-cat-bars"></div>
+      </div>
+      <!-- Size distribution -->
+      <div id="rn1-buckets" style="padding:0 14px 10px;display:none">
+        <div style="font-size:9px;letter-spacing:0.08em;color:var(--muted);margin-bottom:5px">SIZE DISTRIBUTION</div>
+        <div id="rn1-bucket-bars"></div>
+      </div>
+    </section>
+
   </div><!-- .mirror-right -->
 
 </div><!-- .mirror-grid -->
@@ -356,7 +413,10 @@
     <section class="panel" style="flex:1;min-height:0;">
       <div class="p-head">
         <span class="p-title">LIVE EVENTS</span>
-        <span class="badge" id="df-api-badge" title="API-Football quota">API OK</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <span class="badge" id="df-api-badge-af" title="API-Football quota">AF —</span>
+          <span class="badge" id="df-api-badge-sr" title="Sportradar quota">SR —</span>
+        </span>
       </div>
       <div class="feed" id="df-event-feed">
         <div class="empty">Waiting for live soccer events…</div>
@@ -434,13 +494,145 @@
       </div>
     </section>
 
+    <!-- Edge Latency panel -->
+    <section class="panel" style="flex:1;min-height:0;">
+      <div class="p-head">
+        <span class="p-title">EDGE LATENCY</span>
+        <span class="badge" id="df-edge-stats">--</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Latency</th>
+              <th>ΔPrice</th>
+              <th>Feed</th>
+            </tr>
+          </thead>
+          <tbody id="df-edge-tbody">
+            <tr><td colspan="4" class="empty">No measurements yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </div><!-- .mirror-right -->
 
 </div><!-- .mirror-grid -->
 </div><!-- #tab-datafeed -->
 
 <script src="/static/app.js"></script>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- CRYPTO ARB TAB                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-cryptoarb" class="tab-content">
+<div class="mirror-grid">
+
+  <!-- ── LEFT ──────────────────────────────────────────────────────────── -->
+  <div class="mirror-left">
+
+    <!-- Stats overview -->
+    <div class="panel" style="flex-shrink:0">
+      <div class="p-head"><span class="p-title">CRYPTO ARB OVERVIEW</span>
+        <button class="small-btn" id="ca-reset-btn">RESET</button>
+      </div>
+      <div class="ov-grid">
+        <div class="ov-cell"><span class="ov-lbl">BALANCE</span><span class="ov-val" id="ca-balance">$20,000.00</span></div>
+        <div class="ov-cell"><span class="ov-lbl">REALIZED P&amp;L</span><span class="ov-val" id="ca-pnl">$0.00</span></div>
+        <div class="ov-cell"><span class="ov-lbl">TOTAL SCANS</span><span class="ov-val" id="ca-scans">0</span></div>
+        <div class="ov-cell"><span class="ov-lbl">OPPORTUNITIES</span><span class="ov-val y" id="ca-opps">0</span></div>
+        <div class="ov-cell"><span class="ov-lbl">TRADES</span><span class="ov-val g" id="ca-trades">0</span></div>
+        <div class="ov-cell"><span class="ov-lbl">PAIRS WATCHED</span><span class="ov-val" id="ca-pairs">—</span></div>
+      </div>
+      <div style="padding:8px 12px;font-size:11px;color:var(--muted)">
+        Monitoring since <span id="ca-since">—</span>
+      </div>
+    </div>
+
+    <!-- Exchange health -->
+    <div class="panel" style="flex-shrink:0">
+      <div class="p-head"><span class="p-title">EXCHANGE HEALTH</span></div>
+      <div style="display:flex;gap:20px;padding:10px 14px;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="ca-health-cb-dot" style="width:10px;height:10px;border-radius:50%;background:var(--muted);display:inline-block"></span>
+          <span style="font-family:var(--mono);font-size:12px">COINBASE</span>
+          <span id="ca-health-cb-lbl" style="font-size:11px;color:var(--muted)">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="ca-health-kr-dot" style="width:10px;height:10px;border-radius:50%;background:var(--muted);display:inline-block"></span>
+          <span style="font-family:var(--mono);font-size:12px">KRAKEN</span>
+          <span id="ca-health-kr-lbl" style="font-size:11px;color:var(--muted)">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top pairs -->
+    <div class="panel" style="flex:1;min-height:0">
+      <div class="p-head"><span class="p-title">TOP PAIRS</span></div>
+      <div id="ca-top-pairs" style="padding:6px 0;overflow-y:auto;height:calc(100% - 36px)"></div>
+    </div>
+
+  </div><!-- mirror-left -->
+
+  <!-- ── CENTER ─────────────────────────────────────────────────────────── -->
+  <div class="mirror-center">
+
+    <!-- Live scan feed -->
+    <div class="panel" style="flex:0 0 220px">
+      <div class="p-head">
+        <span class="p-title">LIVE SCAN FEED</span>
+        <span id="ca-scan-meta" style="font-size:11px;color:var(--muted)">waiting for first scan…</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="pos-table" style="width:100%">
+          <thead><tr>
+            <th>PAIR</th><th>CB ASK</th><th>KR BID</th><th>RAW %</th><th>NET %</th>
+          </tr></thead>
+          <tbody id="ca-scan-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Opportunity cards -->
+    <div class="panel" style="flex:1;min-height:0">
+      <div class="p-head"><span class="p-title">OPPORTUNITIES</span>
+        <span id="ca-opp-count-lbl" style="font-size:11px;color:var(--muted)">0 detected</span>
+      </div>
+      <div id="ca-opp-feed" class="feed" style="height:calc(100% - 36px)"></div>
+    </div>
+
+  </div><!-- mirror-center -->
+
+  <!-- ── RIGHT ──────────────────────────────────────────────────────────── -->
+  <div class="mirror-right">
+
+    <!-- P&L Chart -->
+    <div class="panel chart-wrap" style="flex:0 0 200px">
+      <div class="p-head"><span class="p-title">CUMULATIVE P&amp;L</span></div>
+      <canvas id="ca-pnl-chart"></canvas>
+    </div>
+
+    <!-- Trade log -->
+    <div class="panel" style="flex:1;min-height:0">
+      <div class="p-head"><span class="p-title">TRADE LOG</span></div>
+      <div style="overflow-x:auto;height:calc(100% - 36px);overflow-y:auto">
+        <table class="pos-table" style="width:100%">
+          <thead><tr>
+            <th>TIME</th><th>PAIR</th><th>BUY</th><th>SELL</th><th>NET%</th><th>P&amp;L</th>
+          </tr></thead>
+          <tbody id="ca-trade-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- mirror-right -->
+
+</div><!-- mirror-grid -->
+</div><!-- #tab-cryptoarb -->
+
 <script src="/static/mirror.js"></script>
 <script src="/static/datafeed.js"></script>
+<script src="/static/crypto_arb.js"></script>
 </body>
 </html>

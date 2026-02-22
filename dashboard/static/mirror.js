@@ -395,8 +395,97 @@ window.removeAddr = async (address) => {
   await fetch(`/api/mirror/addresses/${encodeURIComponent(address)}`, { method: 'DELETE' });
 };
 
+// ── RN1 Analysis ─────────────────────────────────────────────────────────────
+
+async function loadRN1Analysis(force = false) {
+  const url    = force ? '/api/mirror/rn1-analysis/refresh' : '/api/mirror/rn1-analysis';
+  const method = force ? 'POST' : 'GET';
+  try {
+    mirrorEl('rn1-meta', force ? 'refreshing…' : 'loading…');
+    const resp = await fetch(url, { method });
+    if (!resp.ok) { mirrorEl('rn1-meta', 'unavailable'); return; }
+    renderRN1(await resp.json());
+  } catch (e) {
+    mirrorEl('rn1-meta', 'error');
+  }
+}
+
+function renderRN1(d) {
+  if (!d) return;
+
+  // Header badge
+  const buyCount = d.buy_trades || 0;
+  const ts       = d.fetched_at ? new Date(d.fetched_at * 1000).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+  mirrorEl('rn1-meta', `${buyCount} trades · ${ts}`);
+
+  // Sizing stats
+  const sz = d.sizing || {};
+  if (sz.count) {
+    document.getElementById('rn1-sizing-grid').style.display = '';
+    mirrorEl('rn1-median',    sz.median  != null ? `$${sz.median}` : '—');
+    mirrorEl('rn1-mean',      sz.mean    != null ? `$${sz.mean}` : '—');
+    mirrorEl('rn1-p95',       sz.p95     != null ? `$${sz.p95}` : '—');
+    mirrorEl('rn1-max',       sz.max     != null ? `$${sz.max}` : '—');
+  }
+
+  // Yes/No split
+  const oc = d.outcome_split || {};
+  if (oc.yes_pct != null) {
+    mirrorEl('rn1-yn', `${oc.yes_pct}% / ${oc.no_pct}%`);
+  }
+
+  // Avg entry price
+  const pd = d.price_dist || {};
+  if (pd.mean != null) {
+    mirrorEl('rn1-avg-price', (pd.mean * 100).toFixed(1) + '%');
+  }
+
+  // Timing
+  const tm = d.timing || {};
+  if (tm.trades_last_30d != null) {
+    mirrorEl('rn1-30d',     tm.trades_last_30d);
+    mirrorEl('rn1-per-day', tm.avg_trades_per_day != null ? tm.avg_trades_per_day.toFixed(1) : '—');
+  }
+
+  // Category distribution bars
+  const cats = d.category_dist || {};
+  const catEl = document.getElementById('rn1-cats');
+  const catBars = document.getElementById('rn1-cat-bars');
+  if (catBars && Object.keys(cats).length) {
+    catEl.style.display = '';
+    const maxCat = Math.max(...Object.values(cats));
+    catBars.innerHTML = Object.entries(cats).map(([name, count]) => `
+      <div class="rn1-bar-row">
+        <span class="rn1-bar-label" title="${esc2(name)}">${esc2(name)}</span>
+        <div class="rn1-bar-track"><div class="rn1-bar-fill" style="width:${Math.round(count/maxCat*100)}%;background:var(--blue)"></div></div>
+        <span class="rn1-bar-val">${count}</span>
+      </div>`).join('');
+  }
+
+  // Size bucket bars
+  const buckets = sz.buckets || {};
+  const buckEl  = document.getElementById('rn1-buckets');
+  const buckBars = document.getElementById('rn1-bucket-bars');
+  if (buckBars && Object.keys(buckets).length) {
+    buckEl.style.display = '';
+    const maxB = Math.max(...Object.values(buckets));
+    buckBars.innerHTML = Object.entries(buckets).map(([label, count]) => `
+      <div class="rn1-bar-row">
+        <span class="rn1-bar-label">${esc2(label)}</span>
+        <div class="rn1-bar-track"><div class="rn1-bar-fill" style="width:${maxB ? Math.round(count/maxB*100) : 0}%;background:var(--purple)"></div></div>
+        <span class="rn1-bar-val">${count}</span>
+      </div>`).join('');
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', initMirrorChart);
+document.addEventListener('DOMContentLoaded', () => {
+  initMirrorChart();
+  loadRN1Analysis(false);
+
+  const btn = document.getElementById('btn-rn1-refresh');
+  if (btn) btn.addEventListener('click', () => loadRN1Analysis(true));
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc2(s) {

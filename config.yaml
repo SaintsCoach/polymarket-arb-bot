@@ -58,7 +58,7 @@ paper_mode:
 
 # ── Mirror Bot ────────────────────────────────────────────────────────────────
 mirror_mode:
-  starting_balance_usdc: 20000.0    # virtual portfolio (40 slots × $500)
+  starting_balance_usdc: 20000.0    # virtual portfolio (200 slots × $100)
   poll_interval_seconds: 30.0       # default polling interval per address
 
   # Addresses to mirror — add more via the dashboard UI or directly here
@@ -71,9 +71,25 @@ datafeed_mode:
   enabled: true
   starting_balance_usdc: 20000.0
   api_football_key: "f50c4634e27f102584264c4a3049a3f0"
-  poll_interval_seconds: 30.0
+  sportradar_api_key: ""           # paste trial key here
+  poll_interval_seconds: 15.0     # API-Football poll (was 30)
+  sportradar_poll_seconds: 30.0   # Sportradar poll
   min_edge_pct: 3.0
   entry_window_seconds: 45
+  edge_tracker_poll_s: 3.0
+  edge_price_move_threshold: 0.02
+
+# ── Crypto Arb Bot ────────────────────────────────────────────────────────────
+crypto_arb_mode:
+  enabled: true
+  starting_balance_usdc: 20000.0
+  scan_interval_seconds: 35.0
+  min_profit_pct: 0.5
+  max_position_usdc: 500.0
+  max_position_pct: 0.02
+  min_24h_volume_usdc: 100000.0
+  order_book_depth: 10
+  min_order_book_age_s: 60.0
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging:

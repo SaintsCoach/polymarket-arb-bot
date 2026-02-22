@@ -1,5 +1,5 @@
 """
-40-slot portfolio manager for the Mirror Bot.
+200-slot portfolio manager for the Mirror Bot.
 
 Lifecycle
 ---------
@@ -26,8 +26,8 @@ from .models import MirrorPosition, QueuedTrade, ResolvedTrade, WatchedAddress
 
 logger = logging.getLogger("arb_bot.mirror.portfolio")
 
-SLOTS            = 40
-SLOT_SIZE_USDC   = 500.0
+SLOTS            = 200
+SLOT_SIZE_USDC   = 100.0
 STARTING_BALANCE = 20_000.0
 
 GAMMA_API        = "https://gamma-api.polymarket.com"
