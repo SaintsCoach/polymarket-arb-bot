@@ -71,7 +71,7 @@ datafeed_mode:
   enabled: true
   starting_balance_usdc: 20000.0
   api_football_key: "f50c4634e27f102584264c4a3049a3f0"
-  sportradar_api_key: ""           # paste trial key here
+  sportradar_api_key: "10dmzCKnmZLD4ApgBsMzywRsLx1bkgsWDv2Li4TC"
   poll_interval_seconds: 15.0     # API-Football poll (was 30)
   sportradar_poll_seconds: 30.0   # Sportradar poll
   min_edge_pct: 3.0
@@ -84,10 +84,11 @@ crypto_arb_mode:
   enabled: true
   starting_balance_usdc: 20000.0
   scan_interval_seconds: 35.0
-  min_profit_pct: 0.5
-  max_position_usdc: 500.0
-  max_position_pct: 0.02
-  min_24h_volume_usdc: 100000.0
+  min_profit_pct: 0.3
+  max_position_usdc: 8000.0
+  max_position_pct: 0.40
+  min_24h_volume_usdc: 50000.0
+  max_24h_volume_usdc: 200000.0          # excludes HFT-covered pairs; targets illiquid sweet spot
   order_book_depth: 10
   min_order_book_age_s: 60.0
 

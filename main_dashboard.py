@@ -121,6 +121,7 @@ def main() -> None:
             max_position_usdc=float(ca_cfg.get("max_position_usdc", 500.0)),
             max_position_pct=float(ca_cfg.get("max_position_pct", 0.02)),
             min_volume_usdc=float(ca_cfg.get("min_24h_volume_usdc", 100_000.0)),
+            max_volume_usdc=float(ca_cfg.get("max_24h_volume_usdc", float("inf"))),
             order_book_depth=int(ca_cfg.get("order_book_depth", 10)),
             min_book_age_s=float(ca_cfg.get("min_order_book_age_s", 60.0)),
         )

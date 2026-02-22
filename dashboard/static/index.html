@@ -567,10 +567,19 @@
       </div>
     </div>
 
-    <!-- Top pairs -->
-    <div class="panel" style="flex:1;min-height:0">
+    <!-- Top pairs by opportunity count -->
+    <div class="panel" style="flex:0 0 auto">
       <div class="p-head"><span class="p-title">TOP PAIRS</span></div>
-      <div id="ca-top-pairs" style="padding:6px 0;overflow-y:auto;height:calc(100% - 36px)"></div>
+      <div id="ca-top-pairs" style="padding:6px 0"></div>
+    </div>
+
+    <!-- Quality score panel (top 10 by raw/fee ratio) -->
+    <div class="panel" style="flex:1;min-height:0">
+      <div class="p-head">
+        <span class="p-title">SPREAD QUALITY</span>
+        <span id="ca-quality-scan-lbl" style="font-size:11px;color:var(--muted)">—</span>
+      </div>
+      <div id="ca-quality-pairs" style="padding:6px 0;overflow-y:auto;height:calc(100% - 36px)"></div>
     </div>
 
   </div><!-- mirror-left -->
@@ -587,7 +596,7 @@
       <div style="overflow-x:auto">
         <table class="pos-table" style="width:100%">
           <thead><tr>
-            <th>PAIR</th><th>CB ASK</th><th>KR BID</th><th>RAW %</th><th>NET %</th>
+            <th>PAIR</th><th>DIR</th><th>RAW %</th><th>FEE %</th><th>NET %</th><th>QUALITY</th>
           </tr></thead>
           <tbody id="ca-scan-tbody"></tbody>
         </table>
