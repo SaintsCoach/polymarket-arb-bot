@@ -186,9 +186,16 @@ class DataFeedBot:
         if evt.event_type not in ("goal", "red_card"):
             return
 
-        rn1_teams = self._get_rn1_teams()
-        markets   = self.matcher.find_all_markets(evt, rn1_teams=rn1_teams)
-        opps      = self.detector.evaluate_all(evt, markets)
+        # Primary: match against Mirror Bot's known active positions
+        rn1_positions = self._get_rn1_positions()
+        markets       = self.matcher.find_markets_from_positions(evt, rn1_positions)
+
+        # Fallback: Gamma API (covers non-RN1 markets)
+        if not markets:
+            rn1_teams = self._get_rn1_teams()
+            markets   = self.matcher.find_all_markets(evt, rn1_teams=rn1_teams)
+
+        opps = self.detector.evaluate_all(evt, markets)
 
         for opp in opps:
             if self._bus:
@@ -219,6 +226,16 @@ class DataFeedBot:
             return teams
         except Exception:
             return set()
+
+    def _get_rn1_positions(self) -> list:
+        """Return the raw Mirror Bot position dicts (confirmed-active markets)."""
+        if self._mirror_bot is None:
+            return []
+        try:
+            snap = self._mirror_bot.snapshot()
+            return snap.get("positions", [])
+        except Exception:
+            return []
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 

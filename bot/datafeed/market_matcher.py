@@ -121,6 +121,92 @@ class MarketMatcher:
             )
         return matched
 
+    # ── Mirror-Bot positions as market pool ──────────────────────────────────
+
+    def find_markets_from_positions(self, event, positions: list) -> list:
+        """
+        Match a LiveEvent against Mirror Bot positions (confirmed-active markets).
+        Positions are dicts with keys: market_question, token_id, outcome, current_price.
+
+        Returns list[MatchedMarket].  Lower threshold (0.30) is safe because every
+        position here is a known-live market — there is no noise pool.
+        """
+        if not positions:
+            return []
+
+        home_norm = _normalize(event.home_team)
+        away_norm = _normalize(event.away_team)
+        matched: list[MatchedMarket] = []
+        seen_questions: set = set()
+
+        for pos in positions:
+            question = pos.get("market_question") or pos.get("title") or ""
+            if not question or question in seen_questions:
+                continue
+
+            norm_q = _normalize(question)
+            s = self._score(norm_q, home_norm, away_norm)
+            if s < 0.30:
+                continue
+
+            seen_questions.add(question)
+
+            token_id = str(pos.get("token_id", ""))
+            current_price = float(pos.get("current_price") or pos.get("entry_price") or 0.0)
+            if not token_id or not current_price:
+                continue
+
+            market_id = pos.get("id") or question[:30]
+            ou_match  = _OU_REGEX.search(norm_q)
+            if ou_match:
+                matched.append(MatchedMarket(
+                    market_id=market_id,
+                    question=question[:120],
+                    market_type=MarketType.OVER_UNDER,
+                    token_id=token_id,
+                    token_id_no="",
+                    current_price=current_price,
+                    ou_line=float(ou_match.group(1)),
+                    outcome=pos.get("outcome", "Over"),
+                ))
+                continue
+
+            if _BTTS_REGEX.search(norm_q):
+                matched.append(MatchedMarket(
+                    market_id=market_id,
+                    question=question[:120],
+                    market_type=MarketType.BOTH_TEAMS,
+                    token_id=token_id,
+                    token_id_no="",
+                    current_price=current_price,
+                    ou_line=None,
+                    outcome=pos.get("outcome", "Yes"),
+                ))
+                continue
+
+            matched.append(MatchedMarket(
+                market_id=market_id,
+                question=question[:120],
+                market_type=MarketType.GAME_WINNER,
+                token_id=token_id,
+                token_id_no="",
+                current_price=current_price,
+                ou_line=None,
+                outcome=pos.get("outcome", "Yes"),
+            ))
+
+        if matched:
+            logger.info(
+                "[matcher] '%s vs %s' → %d markets from positions (score≥0.30)",
+                event.home_team, event.away_team, len(matched),
+            )
+        else:
+            logger.debug(
+                "[matcher] '%s vs %s' → no position match (pool=%d)",
+                event.home_team, event.away_team, len(positions),
+            )
+        return matched
+
     # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _classify_market(self, mkt: dict, norm_title: str) -> "MatchedMarket | None":
